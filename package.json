@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "import": "node scripts/import-srt.js",
+    "build": "node scripts/build-demo.js",
     "test": "node --test"
   }
 }

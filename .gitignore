@@ -9,4 +9,5 @@ data/episodes.json
 *.pfpart
 .env
 coverage/
+dist/
 *.log
