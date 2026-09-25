@@ -1,0 +1,12 @@
+node_modules/
+.npm-cache/
+media/
+data/dialogues.json
+data/episodes.json
+*.srt
+*.mkv
+*.mp4
+*.pfpart
+.env
+coverage/
+*.log

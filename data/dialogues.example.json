@@ -1,0 +1,29 @@
+[
+  {
+    "id": "DEMO-0001",
+    "episode": "DEMO",
+    "start": 4,
+    "end": 7,
+    "zh": "时间到了，我们开始吧。",
+    "en": "It's time. Let's begin.",
+    "demo": true
+  },
+  {
+    "id": "DEMO-0002",
+    "episode": "DEMO",
+    "start": 12,
+    "end": 16,
+    "zh": "这个问题值得再想一想。",
+    "en": "This question deserves another look.",
+    "demo": true
+  },
+  {
+    "id": "DEMO-0003",
+    "episode": "DEMO",
+    "start": 21,
+    "end": 25,
+    "zh": "我们可以换一种方法。",
+    "en": "We can try a different approach.",
+    "demo": true
+  }
+]

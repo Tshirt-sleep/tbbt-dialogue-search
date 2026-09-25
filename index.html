@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101322">
+  <title>双语台词搜索 · Dialogue Finder</title>
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/">▣ <span>Dialogue Finder</span></a><span class="top-note">双语台词检索实验室</span></header>
+  <main>
+    <section class="hero">
+      <span class="eyebrow">SEARCH THE MOMENT · 双语检索</span>
+      <h1>找到那句台词，<br><em>回到那个瞬间。</em></h1>
+      <p>输入中文或英文关键词，从台词跳转到对应的画面与时间。</p>
+      <form id="search-form" role="search"><label for="query" class="sr-only">搜索中英文台词</label><span class="search-icon">⌕</span><input id="query" type="search" placeholder="试试搜索「时间」或 time" autocomplete="off"><button type="submit">搜索台词 <span>↗</span></button></form>
+      <p id="catalog-note" class="sample-note">正在读取剧集目录…</p>
+    </section>
+    <div class="layout">
+      <section class="results-panel" aria-label="搜索结果"><div class="section-heading"><div><span class="eyebrow">01 / RESULTS</span><h2>搜索结果</h2></div><span id="count" class="count"></span></div><div class="filter-row"><label for="episode-filter">筛选集数</label><select id="episode-filter" aria-label="筛选集数"><option value="all">全部集数</option></select></div><div id="results" class="results"></div><button id="load-more" class="load-more" type="button" hidden>加载更多</button></section>
+      <aside class="player-panel"><div class="section-heading"><div><span class="eyebrow">02 / PLAYER</span><h2>片段播放</h2></div></div><div class="screen"><video id="video" controls playsinline preload="metadata"></video><div id="video-placeholder" class="placeholder"><span>▶</span><p>选择一条台词，查看对应片段</p></div></div><div class="player-body"><div class="player-meta"><span id="episode">尚未选择台词</span><span id="time">--:--</span></div><div id="subtitle" class="subtitle" aria-live="off"><p>字幕会随播放进度显示在这里</p></div><p id="media-status" class="status"></p><button id="share" class="share" type="button" disabled>复制片段链接 ↗</button></div></aside>
+    </div>
+  </main>
+  <footer>Dialogue Finder <span>·</span> 一句台词，一段记忆</footer>
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>
