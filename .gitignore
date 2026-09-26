@@ -10,4 +10,5 @@ data/episodes.json
 .env
 coverage/
 dist/
+publish-candidate/
 *.log

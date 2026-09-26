@@ -7,6 +7,8 @@
     "start": "node server.js",
     "import": "node scripts/import-srt.js",
     "build": "node scripts/build-demo.js",
+    "prepare:cos": "node scripts/prepare-cos-catalog.js",
+    "build:cos": "node scripts/build-cos.js",
     "test": "node --test"
   }
 }

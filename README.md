@@ -50,6 +50,18 @@ GitHub Actions 会在每次推送和拉取请求时运行 `npm test`。
 
 构建前可运行 `npm test`；构建后检查 `dist` 的文件清单，确认恰好只有上述六个文件。每次构建会清理上次的 `dist` 输出，请勿在其中放置其他文件。
 
+### 获授权素材的 COS + Vercel 发布候选流程
+
+此流程与演示站构建分开，且只适用于已取得视频托管、公开播放及中英文台词检索展示授权的素材。默认 `npm run build` 仍只发布原创演示数据。不要把真实 `data/*.json`、`publish-candidate/`、`media/` 或原始字幕提交到 Git。
+
+1. 将 `media/S01E02.mp4`、`S01E15.mp4`、`S01E16.mp4`、`S01E17.mp4` 上传到 COS 的同一目录，保持这些对象名。先验证 HTTPS 访问、`video/mp4`、HTTP Range 请求和浏览器播放；COS 对象的公开访问范围必须符合授权。
+2. 在 PowerShell 中设置 `$env:COS_MEDIA_BASE_URL='https://你的桶域名/存放MP4的目录/'`，运行 `npm run prepare:cos`。脚本读取本地已导入的真实 JSON，核对四集及 MP4 是否存在，将视频地址改成 COS URL，并在被 Git 忽略的 `publish-candidate/` 中生成 `dialogues.json` 和 `episodes.json`。这一步不上传文件。
+3. 人工检查这两个候选 JSON 的集数、台词内容与视频地址，再将它们上传到 COS 同一目录。可使用与 MP4 相同的目录；若分开存放，记下 JSON 所在目录 URL。两个 JSON 需要可被 Vercel 构建环境通过 HTTPS 读取。
+4. 仓库中的 `vercel.json` 已将 Vercel 构建命令设为 `npm run build:cos`、输出目录设为 `dist`。默认从本项目使用的 COS 桶根目录读取两个 JSON；若文件位于其他目录，在 Vercel 项目中设置 `COS_CATALOG_BASE_URL` 为它们所在目录 URL。该命令在构建时从 COS 读取两个 JSON、核对四集和台词 ID、复制网页文件到 `dist`，不把视频装进 Vercel 构建包。此步骤会让真实台词作为 Vercel 静态文件公开，执行前务必核对授权范围。
+5. 部署后分别验证中文与英文搜索、四集筛选、片段跳转、字幕同步和分享链接。若视频加载失败，检查 COS 对象的访问权限、`Content-Type: video/mp4`、分段请求响应，以及实际 MP4 编码；如果浏览器报告跨域问题，再按最小需要配置 COS CORS。
+
+若授权有限定地区或期限，静态公开文件无法自行实施可靠的地区/期限访问控制；应先设计受控分发方案，而不是执行上述公开部署。`npm run build:cos` 无法验证授权文件，也不会自动上传素材或修改 Vercel 设置。
+
 本仓库只发布代码、文档和原创演示数据。提交前运行 `git status --short` 或 `git ls-files`，确认没有 `media/`、`need/`、SRT、MKV、MP4、`data/dialogues.json`、`data/episodes.json`、`.env` 或 `node_modules/`。普通 GitHub 仓库也不适合存放大视频。
 
 上传代码仓库并不会自动发布可供他人观看的剧集视频。目前分享链接指向本机 `localhost`；如要提供公开网站，需要另外部署前端、设置可公开访问且有分发许可的视频地址，并检查分享链接的公网域名。尚未为本项目选择开源许可证；若希望他人复用代码，可在发布前确定许可证。
