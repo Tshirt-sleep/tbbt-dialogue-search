@@ -128,7 +128,11 @@ function selectLine(line, updateUrl = true) {
       pendingSeekTarget = clipRange(line).start;
       video.currentTime = pendingSeekTarget;
       setSubtitle(activeLine(lines, video.currentTime, line.episode));
-      video.play().catch(() => { status.textContent = '浏览器阻止了自动播放，请点击播放器的播放按钮。'; });
+      video.play().catch(error => {
+        status.textContent = error.name === 'NotAllowedError'
+          ? '浏览器阻止了自动播放，请点击播放器的播放按钮。'
+          : `视频播放失败（${error.name}）。请检查视频地址、权限和编码。`;
+      });
     };
     if (video.readyState >= 1) seek();
     else video.addEventListener('loadedmetadata', seek, { once: true });
@@ -296,7 +300,13 @@ video.addEventListener('timeupdate', () => {
   }
 });
 video.addEventListener('error', () => {
-  if (selected) status.textContent = '视频无法播放。请检查视频地址、访问权限和 MP4 格式。';
+  if (!selected) return;
+  const reason = {
+    2: '网络读取失败',
+    3: '视频解码失败',
+    4: '视频来源或格式不受支持',
+  }[video.error?.code] || '未知错误';
+  status.textContent = `视频无法播放：${reason}。请检查 COS 对象地址、访问权限和 MP4 格式。`;
 });
 share.addEventListener('click', async () => {
   if (!selected) return;

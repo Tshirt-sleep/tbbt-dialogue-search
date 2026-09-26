@@ -18,6 +18,20 @@ async function getJson(name) {
 }
 const [lines, episodes] = await Promise.all([getJson('dialogues.json'), getJson('episodes.json')]);
 const report = validateCatalog(lines, episodes);
+if (!process.env.LOCAL_CATALOG_DIR) {
+  await Promise.all(Object.entries(episodes).map(async ([episode, details]) => {
+    try {
+      const response = await fetch(details.video, {
+        headers: { Range: 'bytes=0-1' },
+        signal: AbortSignal.timeout(15000),
+      });
+      console.log(`${episode} 视频探测：HTTP ${response.status}，类型 ${response.headers.get('content-type') || '未提供'}，范围 ${response.headers.get('content-range') || response.headers.get('accept-ranges') || '未提供'}，下载方式 ${response.headers.get('content-disposition') || '未提供'}`);
+      await response.body?.cancel();
+    } catch (error) {
+      console.warn(`${episode} 视频探测失败：${error.message}`);
+    }
+  }));
+}
 const staging = await fs.mkdtemp(path.join(root, '.cos-build-'));
 try {
   for (const file of ['index.html', 'src/app.js', 'src/core.js', 'src/style.css']) {
