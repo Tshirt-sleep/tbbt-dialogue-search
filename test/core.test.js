@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { searchLines, filterLines, visibleLines, clipRange, activeLine } from '../src/core.js';
+import { searchLines, matchType, filterLines, visibleLines, clipRange, activeLine } from '../src/core.js';
 import { parseSrt, pairCues, mergeEpisodeLines, discoverSrtPairs } from '../scripts/import-srt.js';
 
 const lines = [{ id: 'S01E17-0001', episode: 'S01E17', start: 4, end: 7, zh: '时间到了', en: "It's time" }];
@@ -10,6 +10,31 @@ test('中英文检索与片段时间', () => {
   assert.equal(searchLines(lines, '不存在').length, 0);
   assert.deepEqual(clipRange(lines[0]), { start: 2, end: 9 });
   assert.equal(activeLine(lines, 5, 'S01E17')?.id, lines[0].id);
+});
+test('短语优先，词序颠倒和词间插词归入关键词匹配', () => {
+  const catalogue = [
+    { id: 'reverse', episode: 'S01E02', zh: '', en: 'bang big theory' },
+    { id: 'gap', episode: 'S01E02', zh: '', en: 'big strange bang theory' },
+    { id: 'phrase', episode: 'S01E02', zh: '', en: 'the BIG BANG theory' }
+  ];
+  assert.deepEqual(searchLines(catalogue, 'big bang').map(line => line.id), ['phrase', 'reverse', 'gap']);
+  assert.equal(matchType(catalogue[0], 'big bang'), 'keywords');
+  assert.equal(matchType(catalogue[1], 'big bang'), 'keywords');
+  assert.equal(matchType(catalogue[2], 'BiG BaNg'), 'phrase');
+  assert.equal(matchType(catalogue[0], 'bang big'), 'phrase');
+});
+test('短语结果不重复，集数筛选保留排序，单词和中文可搜索', () => {
+  const catalogue = [
+    { id: 'a', episode: 'S01E02', zh: '大爆炸理论', en: 'big bang theory' },
+    { id: 'b', episode: 'S01E15', zh: '中文台词', en: 'big surprising bang' },
+    { id: 'c', episode: 'S01E15', zh: '中文短语', en: 'BIG BANG' }
+  ];
+  assert.deepEqual(searchLines(catalogue, 'big bang').map(line => line.id), ['a', 'c', 'b']);
+  assert.equal(new Set(searchLines(catalogue, 'big bang').map(line => line.id)).size, 3);
+  assert.deepEqual(filterLines(catalogue, 'big bang', 'S01E15').map(line => line.id), ['c', 'b']);
+  assert.deepEqual(filterLines(catalogue, 'big bang', 'S01E02').map(line => line.id), ['a']);
+  assert.deepEqual(searchLines(catalogue, '中文').map(line => line.id), ['b', 'c']);
+  assert.deepEqual(searchLines(catalogue, 'theory').map(line => line.id), ['a']);
 });
 test('解析 SRT 并按重叠时间配对', () => {
   const zh = parseSrt('1\n00:00:04,000 --> 00:00:07,000\n时间到了。\n');

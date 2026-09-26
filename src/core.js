@@ -2,13 +2,28 @@ export function normalize(value) {
   return String(value ?? '').normalize('NFKC').toLocaleLowerCase().trim();
 }
 
+export function matchType(line, query) {
+  const phrase = normalize(query).replace(/\s+/g, ' ');
+  if (!phrase) return null;
+  const fields = [line.zh, line.en, line.episode].map(value => normalize(value).replace(/\s+/g, ' '));
+  if (fields.some(value => value.includes(phrase))) return 'phrase';
+  const terms = phrase.split(' ');
+  return terms.every(term => fields.some(value => value.includes(term))) ? 'keywords' : null;
+}
+
 export function searchLines(lines, query) {
-  const terms = normalize(query).split(/\s+/).filter(Boolean);
-  if (!terms.length) return lines;
-  return lines.filter(line => {
-    const haystack = normalize(`${line.zh} ${line.en} ${line.episode}`);
-    return terms.every(term => haystack.includes(term));
-  });
+  if (!normalize(query)) return lines;
+  const phrases = [];
+  const keywords = [];
+  const seen = new Set();
+  for (const line of lines) {
+    if (seen.has(line.id)) continue;
+    const type = matchType(line, query);
+    if (!type) continue;
+    seen.add(line.id);
+    (type === 'phrase' ? phrases : keywords).push(line);
+  }
+  return [...phrases, ...keywords];
 }
 
 export function filterLines(lines, query, episode = 'all') {

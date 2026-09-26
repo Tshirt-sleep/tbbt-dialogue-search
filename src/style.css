@@ -69,6 +69,8 @@ main { max-width: 1300px; margin: auto; padding: 0 24px; }
 .card-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: #e9aa78; font-size: 12px; font-weight: 700; }
 .card-location { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .current-badge { padding: 3px 7px; border-radius: 4px; background: #e9aa78; color: #171725; font-size: 10px; }
+.match-badge { padding: 3px 7px; border: 1px solid #ffffff38; border-radius: 4px; color: #d8dae5; font-size: 10px; }
+.match-badge.phrase { border-color: #e9aa7888; color: #f2bc92; }
 .card .zh { font-size: 17px; font-weight: 700; line-height: 1.5; margin: 15px 0 6px; }
 .card .en { color: #b6b9c7; font-size: 14px; line-height: 1.5; margin: 0; }
 mark { border-radius: 3px; padding: 0 2px; background: #e9aa78; color: #1b1c28; }

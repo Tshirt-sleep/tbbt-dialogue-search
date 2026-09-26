@@ -1,4 +1,4 @@
-import { filterLines, visibleLines, clipRange, activeLine, formatTime } from './core.js';
+import { filterLines, matchType, visibleLines, clipRange, activeLine, formatTime } from './core.js';
 
 const $ = selector => document.querySelector(selector);
 const form = $('#search-form');
@@ -53,10 +53,14 @@ function openPlayer() {
   closePlayerButton.focus({ preventScroll: true });
 }
 
-function appendHighlightedText(element, value, queryText) {
-  const terms = queryText.trim().split(/\s+/).filter(Boolean).sort((a, b) => b.length - a.length);
+function appendHighlightedText(element, value, queryText, type) {
+  const terms = type === 'phrase'
+    ? [queryText.trim().split(/\s+/).join('\\s+')]
+    : queryText.trim().split(/\s+/).filter(Boolean).sort((a, b) => b.length - a.length);
   if (!terms.length || !value) { element.textContent = value || '—'; return; }
-  const escaped = terms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const escaped = terms.map(term => type === 'phrase'
+    ? term.split('\\s+').map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+')
+    : term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const pattern = new RegExp(escaped.join('|'), 'giu');
   let cursor = 0;
   for (const match of value.matchAll(pattern)) {
@@ -192,6 +196,7 @@ function render() {
     return;
   }
   for (const line of visible) {
+    const type = matchType(line, query.value);
     const card = document.createElement('button');
     card.type = 'button';
     card.className = `card${selected?.id === line.id ? ' active' : ''}`;
@@ -205,6 +210,12 @@ function render() {
     const left = document.createElement('span');
     left.className = 'card-location';
     left.append(ep);
+    if (type) {
+      const badge = document.createElement('span');
+      badge.className = `match-badge ${type}`;
+      badge.textContent = type === 'phrase' ? '短语匹配' : '关键词匹配';
+      left.append(badge);
+    }
     if (selected?.id === line.id) {
       const badge = document.createElement('span');
       badge.className = 'current-badge';
@@ -216,7 +227,7 @@ function render() {
     for (const [className, value] of [['zh', line.zh], ['en', line.en]]) {
       const p = document.createElement('p');
       p.className = className;
-      appendHighlightedText(p, value, query.value);
+      appendHighlightedText(p, value, query.value, type);
       card.append(p);
     }
     card.addEventListener('click', () => selectLine(line));
