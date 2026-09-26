@@ -296,7 +296,7 @@ video.addEventListener('timeupdate', () => {
   }
 });
 video.addEventListener('error', () => {
-  if (selected) status.textContent = '视频缺失或浏览器无法播放。请检查 media/ 下的 MP4 文件。';
+  if (selected) status.textContent = '视频无法播放。请检查视频地址、访问权限和 MP4 格式。';
 });
 share.addEventListener('click', async () => {
   if (!selected) return;
@@ -339,6 +339,6 @@ try {
   if (linked) selectLine(linked, false);
   else if (id) status.textContent = '分享的台词 ID 不存在，可能已被移除。';
 } catch (error) {
-  results.textContent = '台词数据加载失败。请确认通过 npm start 启动，并检查数据文件。';
+  results.textContent = '台词数据加载失败。请检查 /data 下的 JSON 文件。';
   status.textContent = error.message;
 }
