@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { expectedEpisodes, validateCatalog } from '../scripts/catalog-validation.js';
+import { expectedEpisodes, validateCatalog, withMediaBase } from '../scripts/catalog-validation.js';
 
 function fixture() {
   const episodes = Object.fromEntries(expectedEpisodes.map(episode => [episode, {
@@ -27,4 +27,13 @@ test('正式目录拒绝演示台词', () => {
   const { lines, episodes } = fixture();
   lines[0].demo = true;
   assert.throws(() => validateCatalog(lines, episodes), /台词数据无效/);
+});
+
+test('R2 视频地址替换不修改源集数数据，并拒绝非公开 HTTPS 地址', () => {
+  const { episodes } = fixture();
+  const rewritten = withMediaBase(episodes, 'https://media.example/media');
+  assert.equal(rewritten.S01E02.video, 'https://media.example/media/S01E02.mp4');
+  assert.equal(episodes.S01E02.video, 'https://example.com/S01E02.mp4');
+  assert.throws(() => withMediaBase(episodes, 'http://media.example/media/'), /公开 HTTPS/);
+  assert.throws(() => withMediaBase(episodes, 'https://media.example/media/?token=secret'), /公开 HTTPS/);
 });

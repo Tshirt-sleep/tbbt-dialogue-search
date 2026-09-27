@@ -60,6 +60,12 @@ GitHub Actions 会在每次推送和拉取请求时运行 `npm test`。
 4. 仓库中的 `vercel.json` 已将 Vercel 构建命令设为 `npm run build:cos`、输出目录设为 `dist`。默认从本项目使用的 COS 桶根目录读取两个 JSON；若文件位于其他目录，在 Vercel 项目中设置 `COS_CATALOG_BASE_URL` 为它们所在目录 URL。该命令在构建时从 COS 读取两个 JSON、核对四集和台词 ID、复制网页文件到 `dist`，不把视频装进 Vercel 构建包。此步骤会让真实台词作为 Vercel 静态文件公开，执行前务必核对授权范围。
 5. 部署后分别验证中文与英文搜索、四集筛选、片段跳转、字幕同步和分享链接。若视频加载失败，检查 COS 对象的访问权限、`Content-Type: video/mp4`、分段请求响应，以及实际 MP4 编码；如果浏览器报告跨域问题，再按最小需要配置 COS CORS。
 
+### 视频改由 Cloudflare R2 提供
+
+四个 MP4 可分别上传为 `bbt-search-videos/media/S01E02.mp4`、`S01E15.mp4`、`S01E16.mp4`、`S01E17.mp4`。使用 rclone 分片上传并逐个核对远端文件大小；R2 凭据不进入仓库。上传成功后，在 R2 桶的 Settings 中连接可公开访问的自有域名；`r2.dev` 地址只适合临时测试。先对每个公开 MP4 URL 检查 HTTPS、`video/mp4`、HTTP 206 字节范围响应，以及浏览器能否播放与拖动。
+
+当前 `npm run build:cos` 默认继续从 COS 读取 `dialogues.json` 和 `episodes.json`，但在构建产物中把四个视频地址改为本项目已验证的 R2 `r2.dev` 目录；COS 上的源 JSON 不变，也不会把视频复制进构建包。换成自有域名时，在 Vercel 项目环境变量中设置 `R2_MEDIA_BASE_URL=https://你的公开域名/media/`，然后重新构建。构建会检查四个视频是否返回 HTTP 206、`video/mp4` 和有效字节范围，且不能带强制下载的响应头；不满足时构建失败，避免发布无法播放的地址。切换后还需在实际浏览器验证四集的播放、拖动、字幕同步与分享链接。Cloudflare 的 `r2.dev` 地址有访问速率限制，适合验证和低流量演示，正式长期使用应连接自有域名。
+
 若授权有限定地区或期限，静态公开文件无法自行实施可靠的地区/期限访问控制；应先设计受控分发方案，而不是执行上述公开部署。`npm run build:cos` 无法验证授权文件，也不会自动上传素材或修改 Vercel 设置。
 
 本仓库只发布代码、文档和原创演示数据。提交前运行 `git status --short` 或 `git ls-files`，确认没有 `media/`、`need/`、SRT、MKV、MP4、`data/dialogues.json`、`data/episodes.json`、`.env` 或 `node_modules/`。普通 GitHub 仓库也不适合存放大视频。

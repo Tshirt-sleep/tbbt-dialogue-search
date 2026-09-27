@@ -27,3 +27,15 @@ export function validateCatalog(lines, episodes) {
 }
 
 export { expectedEpisodes };
+
+export function withMediaBase(episodes, base) {
+  const url = new URL(base);
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {
+    throw new Error('R2_MEDIA_BASE_URL 必须是无凭据、无参数的公开 HTTPS 目录地址');
+  }
+  if (!url.pathname.endsWith('/')) url.pathname += '/';
+  return Object.fromEntries(Object.entries(episodes).map(([episode, details]) => [
+    episode,
+    { ...details, video: new URL(`${episode}.mp4`, url).href },
+  ]));
+}

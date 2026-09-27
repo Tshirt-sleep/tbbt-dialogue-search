@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateCatalog } from './catalog-validation.js';
+import { validateCatalog, withMediaBase } from './catalog-validation.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const base = process.env.COS_CATALOG_BASE_URL || 'https://tbbt-demo-assets-1495950514.cos.ap-guangzhou.myqcloud.com/';
@@ -16,7 +16,9 @@ async function getJson(name) {
   if (!response.ok) throw new Error(`${name} 读取失败：HTTP ${response.status}`);
   return response.json();
 }
-const [lines, episodes] = await Promise.all([getJson('dialogues.json'), getJson('episodes.json')]);
+const [lines, sourceEpisodes] = await Promise.all([getJson('dialogues.json'), getJson('episodes.json')]);
+const mediaBase = process.env.R2_MEDIA_BASE_URL || 'https://pub-a0c4843b29534b999f578e9b898b6127.r2.dev/media/';
+const episodes = withMediaBase(sourceEpisodes, mediaBase);
 const report = validateCatalog(lines, episodes);
 if (!process.env.LOCAL_CATALOG_DIR) {
   await Promise.all(Object.entries(episodes).map(async ([episode, details]) => {
@@ -25,10 +27,16 @@ if (!process.env.LOCAL_CATALOG_DIR) {
         headers: { Range: 'bytes=0-1' },
         signal: AbortSignal.timeout(15000),
       });
-      console.log(`${episode} 视频探测：HTTP ${response.status}，类型 ${response.headers.get('content-type') || '未提供'}，范围 ${response.headers.get('content-range') || response.headers.get('accept-ranges') || '未提供'}，下载方式 ${response.headers.get('content-disposition') || '未提供'}`);
+      const contentType = response.headers.get('content-type') || '';
+      const contentRange = response.headers.get('content-range') || '';
+      const disposition = response.headers.get('content-disposition') || '';
+      console.log(`${episode} 视频探测：HTTP ${response.status}，类型 ${contentType || '未提供'}，范围 ${contentRange || response.headers.get('accept-ranges') || '未提供'}，下载方式 ${disposition || '未提供'}`);
       await response.body?.cancel();
+      if (response.status !== 206 || !/^video\/mp4(?:;|$)/i.test(contentType) || !/^bytes 0-1\//i.test(contentRange) || /attachment/i.test(disposition)) {
+        throw new Error(`${episode} R2 视频不可用于网页播放：需要 HTTP 206、video/mp4、有效字节范围且不能强制下载`);
+      }
     } catch (error) {
-      console.warn(`${episode} 视频探测失败：${error.message}`);
+      throw new Error(`${episode} 视频探测失败：${error.message}`);
     }
   }));
 }
