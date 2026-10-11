@@ -4,15 +4,22 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const port = Number(process.env.PORT || 4173);
-const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.mp4': 'video/mp4' };
+const port = Number(process.env.TBBT_PORT || 4173);
+const previewLocalMedia = process.env.TBBT_LOCAL_MEDIA_PREVIEW === '1';
+const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.mp4': 'video/mp4', '.jpg': 'image/jpeg' };
 const allowedPages = new Set(['/', '/index.html', '/src/app.js', '/src/core.js', '/src/style.css', '/data/dialogues.json', '/data/episodes.json']);
 
 http.createServer(async (request, response) => {
   try {
     const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
-    if (!allowedPages.has(pathname) && !/^\/media\/[A-Za-z0-9_-]+\.mp4$/.test(pathname)) {
+    if (!allowedPages.has(pathname) && !/^\/media\/[A-Za-z0-9_-]+\.mp4$/.test(pathname) && !/^\/assets\/featured\/[A-Za-z0-9_-]+\.jpg$/.test(pathname)) {
       response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('文件不存在');
+      return;
+    }
+    if (previewLocalMedia && pathname === '/data/episodes.json') {
+      const catalog = JSON.parse(await fs.readFile(path.join(root, 'data', 'episodes.json'), 'utf8'));
+      for (const [episode, details] of Object.entries(catalog)) details.video = `/media/${episode}.mp4`;
+      response.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }).end(JSON.stringify(catalog));
       return;
     }
     let file = path.resolve(root, `.${pathname === '/' ? '/index.html' : pathname}`);

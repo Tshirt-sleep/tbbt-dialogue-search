@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { searchLines, matchType, filterLines, visibleLines, clipRange, activeLine } from '../src/core.js';
+import { searchLines, matchType, filterLines, visibleLines, clipRange, activeLine, contextLines } from '../src/core.js';
 import { parseSrt, pairCues, mergeEpisodeLines, discoverSrtPairs } from '../scripts/import-srt.js';
+import { applySpeakerTags } from '../scripts/apply-speakers.js';
 
 const lines = [{ id: 'S01E17-0001', episode: 'S01E17', start: 4, end: 7, zh: '时间到了', en: "It's time" }];
 test('中英文检索与片段时间', () => {
@@ -70,4 +71,33 @@ test('集数筛选、分页与靠后分享台词可见', () => {
   assert.equal(linked[0].id, 'S01E02-90');
   assert.equal(new Set(linked.map(line => line.id)).size, linked.length);
   assert.equal(visibleLines(catalogue, 95, 'S01E02-90').length, 95);
+});
+test('角色筛选只返回对应说话人，未标注台词不冒充角色', () => {
+  const catalogue = [
+    { id: 'one', episode: 'S01E02', speaker: 'Sheldon', zh: 'Bazinga', en: 'Bazinga' },
+    { id: 'two', episode: 'S01E02', speaker: 'Leonard', zh: '好的', en: 'Okay' },
+    { id: 'three', episode: 'S01E15', zh: '匿名', en: 'Unattributed' }
+  ];
+  assert.deepEqual(filterLines(catalogue, '', 'all', 'Sheldon').map(line => line.id), ['one']);
+  assert.deepEqual(filterLines(catalogue, 'bazinga', 'S01E02', 'Sheldon').map(line => line.id), ['one']);
+  assert.deepEqual(filterLines(catalogue, '', 'all', 'all').map(line => line.id), ['one', 'two', 'three']);
+  assert.deepEqual(filterLines(catalogue, '', 'all', '__unlabeled__').map(line => line.id), ['three']);
+});
+test('角色标注按稳定 ID 合并，不改动输入台词且拒绝无效 ID', () => {
+  const catalogue = [{ id: 'one', zh: '保留' }, { id: 'two', speaker: '原标注' }];
+  const tagged = applySpeakerTags(catalogue, { one: '  Sheldon  ' });
+  assert.deepEqual(tagged, [{ id: 'one', zh: '保留', speaker: 'Sheldon' }, catalogue[1]]);
+  assert.equal(catalogue[0].speaker, undefined);
+  assert.throws(() => applySpeakerTags(catalogue, { missing: 'Sheldon' }), /未知台词 ID/);
+  assert.throws(() => applySpeakerTags(catalogue, { one: '  ' }), /非空文本/);
+});
+test('搜索结果前后文按集内时间顺序取邻句并包含当前台词', () => {
+  const catalogue = Array.from({ length: 7 }, (_, index) => ({
+    id: `line-${index}`, episode: 'S01E02', start: index, zh: `中文${index}`, en: `English ${index}`
+  }));
+  catalogue.push({ id: 'other-episode', episode: 'S01E15', start: 3, zh: '另一集', en: 'Other episode' });
+  assert.deepEqual(contextLines(catalogue, 'line-3').map(line => line.id), ['line-1', 'line-2', 'line-3', 'line-4', 'line-5']);
+  assert.deepEqual(contextLines(catalogue, 'line-0').map(line => line.id), ['line-0', 'line-1', 'line-2']);
+  assert.deepEqual(contextLines([...catalogue].reverse(), 'line-3').map(line => line.id), ['line-1', 'line-2', 'line-3', 'line-4', 'line-5']);
+  assert.deepEqual(contextLines(catalogue, 'missing'), []);
 });

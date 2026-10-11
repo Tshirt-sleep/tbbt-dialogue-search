@@ -20,6 +20,14 @@ const [lines, sourceEpisodes] = await Promise.all([getJson('dialogues.json'), ge
 const mediaBase = process.env.R2_MEDIA_BASE_URL || 'https://pub-a0c4843b29534b999f578e9b898b6127.r2.dev/media/';
 const episodes = withMediaBase(sourceEpisodes, mediaBase);
 const report = validateCatalog(lines, episodes);
+const featuredIds = ['S01E02-0050', 'S01E15-0050', 'S01E16-0058', 'S01E17-0034', 'S01E02-0023', 'S01E16-0042'];
+for (const id of featuredIds) {
+  if (!lines.some(line => line.id === id && line.zh && line.en)) {
+    throw new Error(`正式目录缺少双语精选台词：${id}`);
+  }
+  try { await fs.access(path.join(root, 'assets', 'featured', `${id}.jpg`)); }
+  catch { throw new Error(`缺少由视频素材生成的精选缩略图：${id}.jpg；运行 python scripts/generate-featured-thumbnails.py`); }
+}
 if (!process.env.LOCAL_CATALOG_DIR) {
   await Promise.all(Object.entries(episodes).map(async ([episode, details]) => {
     try {
@@ -45,6 +53,10 @@ try {
   for (const file of ['index.html', 'src/app.js', 'src/core.js', 'src/style.css']) {
     await fs.mkdir(path.dirname(path.join(staging, file)), { recursive: true });
     await fs.copyFile(path.join(root, file), path.join(staging, file));
+  }
+  await fs.mkdir(path.join(staging, 'assets', 'featured'), { recursive: true });
+  for (const id of featuredIds) {
+    await fs.copyFile(path.join(root, 'assets', 'featured', `${id}.jpg`), path.join(staging, 'assets', 'featured', `${id}.jpg`));
   }
   await fs.mkdir(path.join(staging, 'data'));
   await fs.writeFile(path.join(staging, 'data/dialogues.json'), JSON.stringify(lines) + '\n');

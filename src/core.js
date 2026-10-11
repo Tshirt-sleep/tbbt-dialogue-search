@@ -26,8 +26,19 @@ export function searchLines(lines, query) {
   return [...phrases, ...keywords];
 }
 
-export function filterLines(lines, query, episode = 'all') {
-  return searchLines(episode === 'all' ? lines : lines.filter(line => line.episode === episode), query);
+export function filterLines(lines, query, episode = 'all', speaker = 'all') {
+  const filtered = lines.filter(line => (episode === 'all' || line.episode === episode) &&
+    (speaker === 'all' || (speaker === '__unlabeled__' ? !String(line.speaker || '').trim() : line.speaker === speaker)));
+  return searchLines(filtered, query);
+}
+
+export function contextLines(lines, lineId, radius = 2) {
+  const line = lines.find(item => item.id === lineId);
+  if (!line) return [];
+  const episodeLines = lines.filter(item => item.episode === line.episode)
+    .sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
+  const index = episodeLines.findIndex(item => item.id === lineId);
+  return episodeLines.slice(Math.max(0, index - radius), index + radius + 1);
 }
 
 export function visibleLines(matches, limit, selectedId = null) {
@@ -38,6 +49,23 @@ export function visibleLines(matches, limit, selectedId = null) {
 
 export function clipRange(line, padding = 2) {
   return { start: Math.max(0, line.start - padding), end: line.end + padding };
+}
+
+export async function playForSelection(video, isCurrent, onError) {
+  try {
+    await video.play();
+  } catch (error) {
+    if (!isCurrent()) return;
+    if (error.name !== 'AbortError') { onError(error); return; }
+    const retry = () => {
+      if (!isCurrent() || !video.paused) return;
+      video.play().catch(retryError => {
+        if (isCurrent() && retryError.name !== 'AbortError') onError(retryError);
+      });
+    };
+    if (video.seeking) video.addEventListener('seeked', retry, { once: true });
+    else retry();
+  }
 }
 
 export function activeLine(lines, time, episode) {
