@@ -5,6 +5,7 @@ const form = $('#search-form');
 const query = $('#query');
 const results = $('#results');
 const featuredList = $('#featured-list');
+const featuredThemeNote = $('#featured-theme-note');
 const episodeFilterButton = $('#episode-filter-button');
 const episodeFilterPanel = $('#episode-filter-panel');
 const episodeFilterOptions = $('#episode-filter-options');
@@ -42,6 +43,21 @@ let clipReady = false;
 let pauseVersion = 0;
 const PAGE_SIZE = 40;
 const FEATURED_IDS = ['S01E02-0050', 'S01E15-0050', 'S01E16-0058', 'S01E17-0034', 'S01E02-0023', 'S01E16-0042'];
+const FEATURED_THEMES = {
+  'S01E02-0050': { id: 'geek', label: '宅文化梗' },
+  'S01E02-0023': { id: 'geek', label: '宅文化梗' },
+  'S01E15-0050': { id: 'social', label: '社交观察' },
+  'S01E17-0034': { id: 'social', label: '社交观察' },
+  'S01E16-0058': { id: 'childhood', label: '童年与生日' },
+  'S01E16-0042': { id: 'childhood', label: '童年与生日' },
+};
+const FEATURED_THEME_NOTES = {
+  all: '从超人电影到科学式吐槽，看看角色如何把日常聊成笑点。',
+  geek: '超人电影与“碳水传送系统”：角色把流行文化和科学词汇变成幽默。',
+  social: '聊幽默感，也留意朋友的心情：看看角色之间的社交与关心。',
+  childhood: '从生日派对到童年经历，看看角色如何谈起成长与家庭。',
+};
+let featuredTheme = 'all';
 let visibleCount = PAGE_SIZE;
 
 function closePlayer() {
@@ -219,7 +235,9 @@ function showPlayError(error, version) {
 
 function renderFeatured() {
   featuredList.replaceChildren();
-  const picks = FEATURED_IDS.map(id => lines.find(line => line.id === id && !line.demo && line.zh && line.en)).filter(Boolean);
+  const picks = FEATURED_IDS.map(id => lines.find(line => line.id === id && !line.demo && line.zh && line.en))
+    .filter(line => line && (featuredTheme === 'all' || FEATURED_THEMES[line.id]?.id === featuredTheme));
+  featuredThemeNote.textContent = FEATURED_THEME_NOTES[featuredTheme];
   if (!picks.length) {
     const empty = document.createElement('p');
     empty.className = 'featured-empty';
@@ -231,6 +249,8 @@ function renderFeatured() {
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'featured-card';
+    const theme = FEATURED_THEMES[line.id];
+    card.dataset.theme = theme?.id || '';
     card.setAttribute('aria-label', `播放 ${episodes[line.episode]?.title || line.episode} ${formatTime(line.start)}：${line.zh} ${line.en}`);
     const media = document.createElement('span');
     media.className = 'featured-media';
@@ -260,17 +280,32 @@ function renderFeatured() {
     const timeLabel = document.createElement('span');
     timeLabel.textContent = formatTime(line.start);
     meta.append(episodeLabel, timeLabel);
+    const themeLabel = document.createElement('span');
+    themeLabel.className = 'featured-theme-tag';
+    themeLabel.textContent = theme?.label || '精选台词';
     const zh = document.createElement('strong');
     zh.textContent = line.zh;
     const en = document.createElement('span');
     en.className = 'featured-en';
     en.textContent = line.en;
-    copy.append(meta, zh, en);
+    copy.append(meta, themeLabel, zh, en);
     card.append(media, copy);
     card.addEventListener('click', () => selectLine(line, true, 'featured'));
     featuredList.append(card);
   }
 }
+
+document.querySelector('#featured-themes').addEventListener('click', event => {
+  const button = event.target.closest('[data-theme]');
+  if (!button) return;
+  featuredTheme = button.dataset.theme;
+  for (const option of document.querySelectorAll('.featured-theme')) {
+    const active = option === button;
+    option.classList.toggle('active', active);
+    option.setAttribute('aria-pressed', String(active));
+  }
+  renderFeatured();
+});
 
 function render() {
   if (query.value.trim()) selectedFromFeatured = false;
