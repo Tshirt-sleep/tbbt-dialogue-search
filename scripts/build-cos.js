@@ -12,6 +12,14 @@ async function getJson(name) {
   if (process.env.LOCAL_CATALOG_DIR) {
     return JSON.parse(await fs.readFile(path.join(process.env.LOCAL_CATALOG_DIR, name), 'utf8'));
   }
+  // Netlify builds can use the repository's ignored local catalog files when
+  // they are present in the build checkout (for example, via a deploy bundle).
+  const localCatalogPath = path.join(root, 'data', name);
+  try {
+    return JSON.parse(await fs.readFile(localCatalogPath, 'utf8'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
   const response = await fetch(new URL(name, baseUrl), { signal: AbortSignal.timeout(30000) });
   if (!response.ok) throw new Error(`${name} 读取失败：HTTP ${response.status}`);
   return response.json();
